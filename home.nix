@@ -90,6 +90,7 @@ in
       qalculate-gtk              # calculator
       gimp                       # photo editor
       nextcloud-client           # cloud file hosting client
+      etcher                     # usb image writer
       gnome.seahorse
       keepassxc
       discord
