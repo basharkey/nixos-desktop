@@ -64,6 +64,8 @@
 
   environment.variables = { EDITOR = "vim"; };
 
+  powerManagement.cpuFreqGovernor = "ondemand";
+
   nix = {
     package = pkgs.nixFlakes; # or versioned attributes like nixVersions.nix_2_8
     extraOptions = ''
