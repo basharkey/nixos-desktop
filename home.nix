@@ -89,8 +89,10 @@ in
       evince                     # pdf viewer
       qalculate-gtk              # calculator
       gimp                       # photo editor
+      thunderbird                # email client
       nextcloud-client           # cloud file hosting client
       #etcher                     # usb image writer (insecure electron version)
+      gnome.gnome-keyring
       gnome.seahorse
       keepassxc
       discord
@@ -114,8 +116,12 @@ in
     noto-fonts-emoji
   ];
 
-  services.gvfs.enable = true; # thunar network mounts, trash
-  services.tumbler.enable = true; # thunar thumbnail image support
+  services = {
+    gvfs.enable = true;                 # thunar network mounts, trash
+    tumbler.enable = true;              # thunar thumbnail image support
+    gnome.gnome-keyring.enable = true;  # keyring
+  };  
+
   programs.ssh.startAgent = true; # ssh agent
   # programs.ssh.enableAskPassword = true; # currently doesn't work on sway
 
