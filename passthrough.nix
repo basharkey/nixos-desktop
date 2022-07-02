@@ -6,18 +6,24 @@ let
   cpuInfo = builtins.readFile /proc/cpuinfo;
 
   name = "win10-vfio";
-  cores = "1";
-  threads = "1";
-  memory = "1";
+  cores = 4;
+  threads = 2;
+  memory = 16;
   disk = "/dev/disk/by-id/wwn-0x500a0751e14b33a3";
-  #mouse = "/dev/input/by-id/usb-Kingsis_Peripherals_ZOWIE_Gaming_mouse-event-mouse";
-  mouse = "";
+  mouse = "/dev/input/by-id/usb-Primax_Kensington_Eagle_Trackball-event-mouse";
   keyboard = "/dev/input/by-id/usb-t.m.k._PS_2_keyboard_converter-event-kbd";
 
-  pciIds = [
+  vfioBindIds = [
     "10de:1b80"
     "10de:10f0"
     "1102:0012"
+  ];
+
+  pciPassIds = [
+    "9:00.0"
+    "9:00.1"
+    "5:00.0"
+    "0b:00.3"
   ];
 
 in {
@@ -25,7 +31,7 @@ in {
   boot.kernelParams =  if builtins.match ".*vendor_id\t: GenuineIntel.*" cpuInfo == [ ] then [ "intel_iommu=on" ] else if builtins.match ".*vendor_id\t: AuthenticAMD.*" cpuInfo == [ ] then [ "amd_iommu=on" ] else null;
 
   boot.kernelModules = [ "vfio" "vfio_iommu_type1" "vfio_pci" "vfio_virqfd" ];
-  boot.extraModprobeConfig ="options vfio-pci ids=${builtins.concatStringsSep "," pciIds}";
+  boot.extraModprobeConfig ="options vfio-pci ids=${builtins.concatStringsSep "," vfioBindIds}";
 
   environment.systemPackages = with pkgs; [
     win-virtio # use ${pkgs.win-virtio.src} to access raw iso
@@ -49,9 +55,12 @@ in {
           <domain type="kvm">
             <name>${name}</name>
             <uuid>UUID</uuid>
-            <memory unit="GiB">${memory}</memory>
-            <os firmware="efi">
+            <memory unit="GiB">${builtins.toString memory}</memory>
+            <vcpu placement='static'>${builtins.toString (cores * threads)}</vcpu>
+            <os>
               <type arch="x86_64" machine="q35">hvm</type>
+              <loader readonly="yes" type="pflash">/run/libvirt/nix-ovmf/OVMF_CODE.fd</loader>
+              <nvram>/var/lib/libvirt/qemu/nvram/${name}_VARS.fd</nvram>
             </os>
             <features>
               <acpi/>
@@ -64,7 +73,7 @@ in {
               <vmport state='off'/>
             </features>
             <cpu mode="host-model" check="partial">
-              <topology sockets="1" dies="1" cores="${cores}" threads="${threads}"/>
+              <topology sockets="1" dies="1" cores="${builtins.toString cores}" threads="${builtins.toString threads}"/>
             </cpu>
             <clock offset='localtime'>
               <timer name='rtc' tickpolicy='catchup'/>
@@ -129,20 +138,19 @@ in {
         '';
       in
         ''
-          for pciId in ${builtins.concatStringsSep " " pciIds}
+          for pciId in ${builtins.concatStringsSep " " pciPassIds}
           do
-             # base string after grep: "00:18.5 0600: 1022:1445"
              # awk get first field with delimeter ":"
-             bus=$(${pkgs.pciutils}/bin/lspci -n | grep $pciId | ${pkgs.gawk}/bin/awk -F":" '{print "0x"$1}')
-             xml=$(sed "s/BUS/$bus/" ${xml})
+             bus=$(echo "$pciId" | ${pkgs.gawk}/bin/awk -F":" '{print "0x"$1}')
+             xml=$(sed -e "s/BUS/$bus/" ${xml})
 
              # awk get string between ":" and "."
-             slot=$(${pkgs.pciutils}/bin/lspci -n | grep $pciId | ${pkgs.gawk}/bin/awk -F"[:.]" '{print "0x"$2}')
-             xml=$(echo "$xml" | sed "s/SLOT/$slot/")
+             slot=$(echo "$pciId" | ${pkgs.gawk}/bin/awk -F"[:.]" '{print "0x"$2}')
+             xml=$(echo "$xml" | sed -e "s/SLOT/$slot/")
 
              # awk get string between "." and " "
-             function=$(${pkgs.pciutils}/bin/lspci -n | grep $pciId | ${pkgs.gawk}/bin/awk -F"[. ]" '{print "0x"$2}')
-             xml=$(echo "$xml" | sed "s/FUNCTION/$function/")
+             function=$(echo "$pciId" | ${pkgs.gawk}/bin/awk -F"[. ]" '{print "0x"$2}')
+             xml=$(echo "$xml" | sed -e "s/FUNCTION/$function/")
              ${pkgs.libvirt}/bin/virsh attach-device --config ${name} <(echo "$xml")
           done
         '';
