@@ -6,6 +6,7 @@ let
     name = "wayweather";
     # disable unpack phase
     dontUnpack = true;
+
     buildInputs = [
       (pkgs.python3.withPackages (pythonPackages: with pythonPackages; [
         requests
@@ -45,6 +46,24 @@ let
       lib/
       lib64/
       __pycache__/
+    '';
+  };
+
+  wallpaper = pkgs.stdenv.mkDerivation {
+    name = "wallpaper";
+    dontUnpack = true;
+    
+    buildInputs = [ pkgs.inkscape ];
+    src = pkgs.fetchurl {
+      url = "https://raw.githubusercontent.com/NixOS/nixos-artwork/master/wallpapers/nix-wallpaper-nineish-dark-gray.svg";
+      sha256 = "3ee975cd2efc3b47b822464bf65c203f077edef3e5c2f525b7f1db1a3e5f8bb9";
+    };
+    buildPhase = ''
+      ${pkgs.inkscape}/bin/inkscape -w 2560 -h 1440 $src -o wallpaper.png
+    '';
+    installPhase = ''
+      mkdir -p $out
+      cp wallpaper.png $out/wallpaper.png
     '';
   };
 
@@ -101,10 +120,7 @@ in
     ];
 
     home.file = {
-      ".config/sway/wallpaper.png".source = pkgs.fetchurl {
-        url = "https://github.com/NixOS/nixos-artwork/blob/master/wallpapers/nix-wallpaper-simple-blue.png";
-        sha256 = "badadc8f37de26814ea546c563678850d08acb9ae32ede7bc48a1452cb0999d2";
-      };
+      ".config/sway/wallpaper.png".source = "${wallpaper}/wallpaper.png";
     };
 
     home.stateVersion = config.system.stateVersion;
