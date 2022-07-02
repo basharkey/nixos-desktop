@@ -1,4 +1,6 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
+
+with lib;
 
 {
   nixpkgs.config.allowUnfree = true;
@@ -8,7 +10,6 @@
 
   # system packages
   environment.systemPackages = with pkgs; [
-    vim                 # text editor
     wget                # retrieve files over HTTP/FTP
     git                 # version control system
     wireguard-tools     # vpn client
@@ -19,5 +20,11 @@
     file
     fd
     nixos-option
+    (vim_configurable.customize {
+      vimrcConfig.packages.myVimPackage = with pkgs.vimPlugins; {
+        start = [ fugitive ];
+      };
+      vimrcConfig.customRC = builtins.readFile "/home/${config.services.vars.user}/.vimrc";
+    })
   ];
 }

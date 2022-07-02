@@ -62,6 +62,8 @@
   #   "caps:escape" # map caps to escape.
   # };
 
+  environment.variables = { EDITOR = "vim"; };
+
   nix = {
     package = pkgs.nixFlakes; # or versioned attributes like nixVersions.nix_2_8
     extraOptions = ''

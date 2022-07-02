@@ -90,18 +90,13 @@ in
       qalculate-gtk              # calculator
       gimp                       # photo editor
       nextcloud-client           # cloud file hosting client
-      etcher                     # usb image writer
+      #etcher                     # usb image writer (insecure electron version)
       gnome.seahorse
       keepassxc
       discord
       spotify
       freetube
     ];
-
-    programs.vim = {
-      enable = true;
-      plugins = with pkgs.vimPlugins; [ fugitive ];
-    };
 
     home.file = {
       ".config/sway/wallpaper.png".source = pkgs.fetchurl {
@@ -110,7 +105,7 @@ in
       };
     };
 
-    home.stateVersion = "22.05";
+    home.stateVersion = config.system.stateVersion;
   };
 
   fonts.fonts = with pkgs; [
