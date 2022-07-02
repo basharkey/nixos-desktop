@@ -1,4 +1,6 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
+
+with lib;
 
 {
   virtualisation.libvirtd.enable = true;
@@ -9,7 +11,9 @@
 
   users.users."${config.services.vars.user}".extraGroups = [ "libvirtd" ];
 
+  # don't think this works
   environment.sessionVariables.LIBVIRT_DEFAULT_URI = [ "qemu:///system" ];
+
   environment.systemPackages = with pkgs; [
     qemu
     OVMF
@@ -17,30 +21,51 @@
     virt-manager
   ];
 
+  # restart libvirtd to apply any configuration changes
   systemd.services.libvirtd = {
-    # add binaries to path so that hooks can use them
-    # https://github.com/NixOS/nixpkgs/issues/51152
-    path = let
-      env = pkgs.buildEnv {
-        name = "qemu-hook-env";
-        paths = with pkgs; [
-          bash
-        ];
-      };
-    in [ env ];
-
-    # fetch qemu hook helper script
+    # create qemu hook helper script with proper bash location
     # https://github.com/PassthroughPOST/VFIO-Tools
     preStart =
       let
-        hookHelper = pkgs.fetchurl {
-          url = "https://raw.githubusercontent.com/PassthroughPOST/VFIO-Tools/master/libvirt_hooks/qemu";
-          sha256 = "e6e561566395ffe1ee3d3615524637d001c4ea9a087bc46ef0bdd3328af9ad94";
-        };
+        hookHelper = pkgs.writeScriptBin "qemu" ''
+          #!${pkgs.stdenv.shell}
+          #
+          # Author: Sebastiaan Meijer (sebastiaan@passthroughpo.st)
+          #
+          # Copy this file to /etc/libvirt/hooks, make sure it's called "qemu".
+          # After this file is installed, restart libvirt.
+          # From now on, you can easily add per-guest qemu hooks.
+          # Add your hooks in /etc/libvirt/hooks/qemu.d/vm_name/hook_name/state_name.
+          # For a list of available hooks, please refer to https://www.libvirt.org/hooks.html
+          #
+          
+          GUEST_NAME="$1"
+          HOOK_NAME="$2"
+          STATE_NAME="$3"
+          MISC="''${@:4}"
+          
+          BASEDIR="$(dirname $0)"
+          
+          HOOKPATH="$BASEDIR/qemu.d/$GUEST_NAME/$HOOK_NAME/$STATE_NAME"
+          
+          set -e # If a script exits with an error, we should as well.
+          
+          # check if it's a non-empty executable file
+          if [ -f "$HOOKPATH" ] && [ -s "$HOOKPATH"] && [ -x "$HOOKPATH" ]; then
+              eval \"$HOOKPATH\" "$@"
+          elif [ -d "$HOOKPATH" ]; then
+              while read file; do
+                  # check for null string
+                  if [ ! -z "$file" ]; then
+                    eval \"$file\" "$@"
+                  fi
+              done <<< "$(find -L "$HOOKPATH" -maxdepth 1 -type f -executable -print;)"
+          fi
+        '';
       in
         ''  
           mkdir -p /var/lib/libvirt/hooks
-          ln -sf ${hookHelper} /var/lib/libvirt/hooks/qemu
+          ln -sf ${hookHelper}/bin/qemu /var/lib/libvirt/hooks
         '';
   };
 }
