@@ -42,9 +42,11 @@ in {
   # libvirt vm definition
   # https://nixos.wiki/wiki/NixOps/Virtualization
   # cant use mkDerivation as virsh requires libvirtd.service running
+
+  # dont bother with cpu pinning, tried it always makes it worse
   systemd.services."${name}" = {
-    after = [ "libvirtd.service" ];
-    requires = [ "libvirtd.service" ];
+    after = [ "libvirtd.service" "${name}-hooks.service" ];
+    requires = [ "libvirtd.service" "${name}-hooks.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
@@ -159,8 +161,8 @@ in {
 
   # libvirt vm hooks
   systemd.services."${name}-hooks" = {
-    after = [ "libvirtd.service" "${name}.service" ];
-    requires = [ "libvirtd.service" "${name}.service" ];
+    after = [ "libvirtd.service" ];
+    requires = [ "libvirtd.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig.Type = "oneshot";
     script =
