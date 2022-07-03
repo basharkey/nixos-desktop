@@ -82,6 +82,7 @@ in
         "users"
         "wheel"
         "networkmanager"
+        "wireshark"
       ];
     };
   };
@@ -117,6 +118,8 @@ in
       discord
       spotify
       freetube
+      wireshark
+      vlc
     ];
 
     home.file = {
@@ -125,6 +128,8 @@ in
 
     home.stateVersion = config.system.stateVersion;
   };
+
+  programs.wireshark.enable = true;
 
   fonts.fonts = with pkgs; [
     noto-fonts

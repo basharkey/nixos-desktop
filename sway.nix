@@ -34,8 +34,9 @@ let
         datadir = "${schema}/share/gsettings-schemas/${schema.name}";
       in ''
         export XDG_DATA_DIRS=${datadir}:$XDG_DATA_DIRS
-        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
-        gsettings set org.gnome.desktop.interface icon-theme 'Adwaita'
+        gnome_schema=org.gnome.desktop.interface
+        gsettings set $gnome_schema gtk-theme 'Adwaita-dark'
+        gsettings set $gnome_schema icon-theme 'Adwaita'
         '';
   };
 
