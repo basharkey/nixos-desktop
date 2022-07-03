@@ -101,10 +101,12 @@ in
     wrapperFeatures.gtk = true;
   };
 
-  environment.sessionVariables = rec {
+  environment.sessionVariables = {
     # fixes cursor disappearing issues in VMs
     WLR_NO_HARDWARE_CURSORS = "1";
     # control qt theme with qt5ct
     QT_QPA_PLATFORMTHEME = "qt5ct";
+    # fixes gtk theme not applying to certain apps (maybe its gtk4 apps? evince/seahorse)
+    GTK_THEME = "Adwaita:dark";
   };
 }
